@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Handjet:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --minecraft-green: #4CAF50;
+  --minecraft-dark-green: #388E3C;
+  --minecraft-dirt: #8B4513;
+  --minecraft-stone: #808080;
+}
+
+@layer base {
+  html {
+    direction: rtl;
+  }
+  
+  body {
+    @apply bg-[#1a1a1a] text-gray-200 font-handjet;
+  }
+
+  .bg-blue-50 {
+    @apply bg-[#1a1a1a];
+  }
+}
+
+@layer components {
+  .font-handjet {
+    font-family: 'Handjet', monospace;
+  }
+
+  .minecraft-card {
+    @apply bg-[#2a2a2a] rounded-lg p-6 border-2 border-green-600 shadow-lg;
+  }
+
+  .minecraft-button {
+    @apply bg-green-600 hover:bg-green-700 text-white font-handjet px-6 py-3 rounded-lg 
+           transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg
+           border-2 border-green-500;
+  }
+
+  .minecraft-grid {
+    background-image: 
+      linear-gradient(to right, rgba(76, 175, 80, 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(76, 175, 80, 0.1) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .minecraft-block {
+    @apply w-8 h-8 bg-green-600 opacity-20;
+    animation: float 4s infinite ease-in-out;
+  }
+
+  .minecraft-particle {
+    @apply w-2 h-2 bg-green-500 rounded-full opacity-30;
+    animation: float 3s infinite ease-in-out;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes backgroundMove {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 100px 100px;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-rotate {
+  animation: rotate 20s linear infinite;
+}
+
+.animate-block-float {
+  animation: blockFloat 6s ease-in-out infinite;
+}
+
+.bg-animate {
+  animation: backgroundMove 20s linear infinite;
+}
