@@ -5,7 +5,8 @@ const Testimonials: React.FC = () => {
   return (
     <section id="testimonials" className="relative py-20 bg-[#1a1a1a]">
       <div className="container mx-auto px-4">
-        <h2 className="text-4xl font-handjet text-green-500 text-center mb-12">חוות דעת</h2>
+        <h2 className="text-4xl font-handjet text-green-500 text-center mb-12">חוות דעת על שיעורי מיינקראפט</h2>
+        <h3 className="text-xl font-handjet text-center mb-8 text-green-400">מה אומרים על השיעורים הפרטיים?</h3>
         
         <div className="max-w-3xl mx-auto">
           <div className="minecraft-card p-6">

@@ -5,7 +5,8 @@ const Contact: React.FC = () => {
   return (
     <section id="contact" className="py-16 bg-[#1a1a1a]">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-handjet text-center mb-12 text-green-500">צור קשר</h2>
+        <h2 className="text-3xl font-handjet text-center mb-12 text-green-500">צור קשר - שיעורי מיינקראפט</h2>
+        <h3 className="text-xl font-handjet text-center mb-8 text-green-400">קבל שיעור ניסיון או שאל שאלות</h3>
 
         <div className="max-w-4xl mx-auto">
           <div className="minecraft-card p-8 text-center">

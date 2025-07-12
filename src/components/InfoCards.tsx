@@ -77,7 +77,8 @@ const InfoCards: React.FC = () => {
   return (
     <section id="info" className="py-16 bg-[#1a1a1a]">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-handjet text-center mb-12 text-green-500">מידע על השיעור הפרטי</h2>
+        <h2 className="text-3xl font-handjet text-center mb-12 text-green-500">שיעורי מיינקראפט - מידע על השיעור הפרטי</h2>
+        <h3 className="text-xl font-handjet text-center mb-8 text-green-400">איך מתנהלים שיעורי מיינקראפט אונליין?</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {infoCards.map((card, index) => (
             <InfoCard

@@ -9,9 +9,12 @@ const Hero: React.FC = () => {
           {/* Text Content */}
           <div className="space-y-8">
             <div>
-              <h1 className="text-4xl md:text-5xl font-handjet text-green-500 mb-4">
+              <h1 className="text-4xl md:text-5xl font-handjet text-green-500 mb-4" id="main-heading">
                 שיעורים פרטיים במיינקראפט
               </h1>
+              <h2 className="text-2xl md:text-3xl font-handjet text-green-400 mb-4">
+                מורה פרטי למיינקראפט - למידה חווייתית דרך משחק
+              </h2>
               <p className="text-xl text-gray-300 mb-6">
                 למידה חווייתית דרך משחק, שיפור אנגלית ופיתוח כישורים דיגיטליים
               </p>
@@ -30,7 +33,9 @@ const Hero: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <a
-                href="#pricing"
+                href="https://wa.me/972542347000"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="minecraft-button bg-green-500 text-white px-8 py-3 rounded-lg text-center font-handjet text-lg hover:bg-green-600 transition-colors"
               >
                 קבע שיעור
@@ -50,7 +55,7 @@ const Hero: React.FC = () => {
             <div className="relative">
               <img 
                 src="https://stingerisrael.co.il/picture_library/YouTuber.webp" 
-                alt="סטינגר - מורה למיינקראפט" 
+                alt="סטינגר ישראל - מורה פרטי למיינקראפט עם ניסיון של 10+ שנים, שיעורים פרטיים במיינקראפט" 
                 className="w-full h-auto rounded-lg transform -rotate-3"
               />
             </div>

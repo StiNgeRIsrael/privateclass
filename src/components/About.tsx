@@ -12,7 +12,7 @@ const About: React.FC = () => {
             <div className="relative">
               <img 
                 src="https://vzge.me/bust/1024/ParlaGames" 
-                alt="סטינגר במיינקראפט" 
+                alt="סטינגר ישראל - יוטיובר מוביל ומורה פרטי למיינקראפט, שיעורים פרטיים במיינקראפט לילדים" 
                 className="w-full h-auto rounded-lg transform rotate-3 scale-x-[-1]"
               />
             </div>
@@ -20,7 +20,8 @@ const About: React.FC = () => {
 
           {/* Text Content */}
           <div className="space-y-6 order-1 md:order-2">
-            <h2 className="text-3xl font-handjet text-green-500 mb-4">מי אני?</h2>
+            <h2 className="text-3xl font-handjet text-green-500 mb-4">מורה פרטי למיינקראפט - מי אני?</h2>
+            <h3 className="text-xl font-handjet text-green-400 mb-4">יוטיובר מוביל עם ניסיון של 10+ שנים</h3>
             <p className="text-gray-300 leading-relaxed">
               אני סטינגר, שחקן מיינקראפט מנוסה עם למעלה מ-10 שנות ניסיון במשחק. אני מאמין בכל ליבי שהמשחק הוא כלי למידה מדהים, שמאפשר לילדים ללמוד בדרך חווייתית ומהנה.
             </p>
