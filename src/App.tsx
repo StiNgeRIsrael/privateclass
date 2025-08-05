@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import About from './components/About';
@@ -8,6 +10,7 @@ import Testimonials from './components/Testimonials';
 import FAQ from './components/FAQ';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
+import MinecraftLogicSEO from './components/MinecraftLogicSEO';
 
 const WHATSAPP_URL = "https://wa.me/972542347000";
 
@@ -87,19 +90,28 @@ function App() {
   }, []);
 
   return (
-    <>
-      <LeaveBehindPopup open={showPopup} onClose={() => setShowPopup(false)} />
-      <div className="min-h-screen bg-[#1a1a1a]">
-        <Navbar />
-        <Hero />
-        <Benefits />
-        <About />
-        <FAQ />
-        <Pricing />
-        <Testimonials />
-        <Footer />
-      </div>
-    </>
+    <HelmetProvider>
+      <Router basename="/class">
+        <LeaveBehindPopup open={showPopup} onClose={() => setShowPopup(false)} />
+        <div className="min-h-screen bg-[#1a1a1a] pt-28">
+          <Navbar />
+          <Routes>
+            <Route path="/" element={
+              <>
+                <Hero />
+                <Benefits />
+                <About />
+                <FAQ />
+                <Pricing />
+                <Testimonials />
+              </>
+            } />
+            <Route path="/minecraft-logic" element={<MinecraftLogicSEO />} />
+          </Routes>
+          <Footer />
+        </div>
+      </Router>
+    </HelmetProvider>
   );
 }
 
