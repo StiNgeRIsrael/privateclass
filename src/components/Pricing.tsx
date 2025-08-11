@@ -84,7 +84,7 @@ const Pricing: React.FC = () => {
   ];
 
   return (
-    <section id="pricing" className="py-16 bg-[#1a1a1a]">
+    <section id="pricing" className="py-16 bg-[#1a1a1a] scroll-mt-20">
       <div className="container mx-auto px-4">
         <h2 className="text-3xl font-handjet text-center mb-12 text-green-500">מחירון שיעורי מיינקראפט</h2>
         <h3 className="text-xl font-handjet text-center mb-8 text-green-400">תוכניות לימוד מותאמות אישית</h3>

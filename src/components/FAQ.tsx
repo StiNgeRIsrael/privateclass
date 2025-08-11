@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
 interface FAQItem {
   question: string;
@@ -66,7 +66,7 @@ const FAQ: React.FC = () => {
   ];
 
   return (
-    <section id="faq" className="py-16 bg-[#1a1a1a] overflow-hidden">
+    <section id="faq" className="py-16 bg-[#1a1a1a] overflow-hidden scroll-mt-20">
       <div className="container mx-auto px-4">
         <h2 className="text-3xl font-handjet text-center mb-12 text-green-500">שאלות נפוצות על שיעורי מיינקראפט</h2>
         <h3 className="text-xl font-handjet text-center mb-8 text-green-400">כל מה שצריך לדעת על שיעורים פרטיים</h3>

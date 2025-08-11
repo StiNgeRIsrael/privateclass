@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -8,9 +8,12 @@ import Benefits from './components/Benefits';
 import Pricing from './components/Pricing';
 import Testimonials from './components/Testimonials';
 import FAQ from './components/FAQ';
-import Contact from './components/Contact';
+// import Contact from './components/Contact';
 import Footer from './components/Footer';
+import EnrichmentHub from './components/EnrichmentHub';
 import MinecraftLogicSEO from './components/MinecraftLogicSEO';
+import MinecraftConfidenceSEO from './components/MinecraftConfidenceSEO';
+import MinecraftAttentionSEO from './components/MinecraftAttentionSEO';
 
 const WHATSAPP_URL = "https://wa.me/972542347000";
 
@@ -36,6 +39,30 @@ const TITLES = [
   "רגע! יש לנו הצעה בשבילך 🎁",
   "נשמח לעזור לך בוואטסאפ!"
 ];
+
+function ScrollManager() {
+  const location = useLocation();
+  const NAVBAR_HEIGHT = 80; // px, matches h-20 in Navbar
+
+  // Scroll to top on route (pathname) change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [location.pathname]);
+
+  // Handle hash anchor with offset for fixed navbar
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      const el = document.getElementById(id);
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.scrollY - NAVBAR_HEIGHT - 8;
+        window.scrollTo({ top: Math.max(y, 0), behavior: 'smooth' });
+      }
+    }
+  }, [location.hash, location.pathname]);
+
+  return null;
+}
 
 function App() {
   const [showPopup, setShowPopup] = useState(false);
@@ -92,8 +119,9 @@ function App() {
   return (
     <HelmetProvider>
       <Router basename="/class">
+        <ScrollManager />
         <LeaveBehindPopup open={showPopup} onClose={() => setShowPopup(false)} />
-        <div className="min-h-screen bg-[#1a1a1a] pt-28">
+        <div className="min-h-screen bg-[#1a1a1a]">
           <Navbar />
           <Routes>
             <Route path="/" element={
@@ -104,9 +132,12 @@ function App() {
                 <FAQ />
                 <Pricing />
                 <Testimonials />
+                <EnrichmentHub />
               </>
             } />
             <Route path="/minecraft-logic" element={<MinecraftLogicSEO />} />
+            <Route path="/minecraft-confidence" element={<MinecraftConfidenceSEO />} />
+            <Route path="/minecraft-attention" element={<MinecraftAttentionSEO />} />
           </Routes>
           <Footer />
         </div>

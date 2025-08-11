@@ -1,9 +1,8 @@
 import React from 'react';
-import { Clock, Star, Trophy } from 'lucide-react';
 
 const About: React.FC = () => {
   return (
-    <section id="about" className="relative py-20 bg-[#1a1a1a]">
+    <section id="about" className="relative py-20 bg-[#1a1a1a] scroll-mt-20">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           {/* Image with Frame */}

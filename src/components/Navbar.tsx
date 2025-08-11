@@ -1,17 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, ChevronDown } from 'lucide-react';
-
-const enrichmentLinks = [
-  { to: '/minecraft-logic', label: 'מיינקראפט וחשיבה לוגית' },
-  // ניתן להוסיף כאן כתבות נוספות בעתיד
-];
+import React, { useState, useEffect } from 'react';
+import { Menu, X } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -22,10 +15,8 @@ const Navbar: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // סגירה אוטומטית של הדרופדאון במובייל כאשר משנים דף
   useEffect(() => {
     setIsOpen(false);
-    setShowDropdown(false);
   }, [location.pathname]);
 
   return (
@@ -41,39 +32,12 @@ const Navbar: React.FC = () => {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8 space-x-reverse">
-            <a href="#about" className="text-gray-300 hover:text-green-500 transition-colors font-rubik">עליי</a>
-            <a href="#benefits" className="text-gray-300 hover:text-green-500 transition-colors font-rubik">יתרונות</a>
-            <a href="#pricing" className="text-gray-300 hover:text-green-500 transition-colors font-rubik">מחירים</a>
-            <a href="#testimonials" className="text-gray-300 hover:text-green-500 transition-colors font-rubik">חוות דעת</a>
-            <a href="#faq" className="text-gray-300 hover:text-green-500 transition-colors font-rubik">שאלות נפוצות</a>
-            <a href="#contact" className="text-gray-300 hover:text-green-500 transition-colors font-rubik">צור קשר</a>
-            <div
-              className="relative"
-              ref={dropdownRef}
-              onMouseEnter={() => setShowDropdown(true)}
-              onMouseLeave={() => setShowDropdown(false)}
-            >
-              <button className="flex items-center text-gray-300 hover:text-green-500 font-rubik transition-colors focus:outline-none">
-                העשרה <ChevronDown size={18} className="ml-1" />
-              </button>
-              {showDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-[#232323] rounded-lg shadow-lg py-2 z-50 border border-green-600">
-                  {enrichmentLinks.map((item) => (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={`block px-4 py-2 text-right transition-colors font-rubik ${
-                        location.pathname === item.to
-                          ? 'text-green-400 bg-[#232323] font-bold' // ירוק רק לדף הפעיל
-                          : 'text-gray-200 hover:bg-green-600 hover:text-white'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
+            <Link to="/#about" className="text-gray-300 hover:text-green-500 transition-colors font-rubik">עליי</Link>
+            <Link to="/#benefits" className="text-gray-300 hover:text-green-500 transition-colors font-rubik">יתרונות</Link>
+            <Link to="/#pricing" className="text-gray-300 hover:text-green-500 transition-colors font-rubik">מחירים</Link>
+            <Link to="/#testimonials" className="text-gray-300 hover:text-green-500 transition-colors font-rubik">חוות דעת</Link>
+            <Link to="/#faq" className="text-gray-300 hover:text-green-500 transition-colors font-rubik">שאלות נפוצות</Link>
+            {/* Removed enrichment dropdown; enrichment moved to a section near footer */}
           </div>
 
           {/* Mobile Menu Button */}
@@ -90,28 +54,12 @@ const Navbar: React.FC = () => {
           isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
         } overflow-hidden`}>
           <div className="py-4 space-y-4">
-            <a href="#about" className="block text-gray-300 hover:text-green-500 transition-colors font-rubik">עליי</a>
-            <a href="#benefits" className="block text-gray-300 hover:text-green-500 transition-colors font-rubik">יתרונות</a>
-            <a href="#pricing" className="block text-gray-300 hover:text-green-500 transition-colors font-rubik">מחירים</a>
-            <a href="#testimonials" className="block text-gray-300 hover:text-green-500 transition-colors font-rubik">חוות דעת</a>
-            <a href="#faq" className="block text-gray-300 hover:text-green-500 transition-colors font-rubik">שאלות נפוצות</a>
-            <a href="#contact" className="block text-gray-300 hover:text-green-500 transition-colors font-rubik">צור קשר</a>
-            <div className="border-t border-gray-700 pt-2">
-              <div className="font-rubik text-gray-300 mb-1">העשרה</div>
-              {enrichmentLinks.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`block px-4 py-2 text-right transition-colors font-rubik ${
-                    location.pathname === item.to
-                      ? 'text-green-400 bg-[#232323] font-bold'
-                      : 'text-gray-200 hover:bg-green-600 hover:text-white'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+            <Link to="/#about" className="block text-gray-300 hover:text-green-500 transition-colors font-rubik">עליי</Link>
+            <Link to="/#benefits" className="block text-gray-300 hover:text-green-500 transition-colors font-rubik">יתרונות</Link>
+            <Link to="/#pricing" className="block text-gray-300 hover:text-green-500 transition-colors font-rubik">מחירים</Link>
+            <Link to="/#testimonials" className="block text-gray-300 hover:text-green-500 transition-colors font-rubik">חוות דעת</Link>
+            <Link to="/#faq" className="block text-gray-300 hover:text-green-500 transition-colors font-rubik">שאלות נפוצות</Link>
+            {/* Removed mobile enrichment list as well */}
           </div>
         </div>
       </div>
