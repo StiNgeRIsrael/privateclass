@@ -14,6 +14,9 @@ import EnrichmentHub from './components/EnrichmentHub';
 import MinecraftLogicSEO from './components/MinecraftLogicSEO';
 import MinecraftConfidenceSEO from './components/MinecraftConfidenceSEO';
 import MinecraftAttentionSEO from './components/MinecraftAttentionSEO';
+import Checkout from './components/Checkout';
+import CheckoutResult from './components/CheckoutResult';
+import AdminPanel from './components/AdminPanel';
 
 const WHATSAPP_URL = "https://wa.me/972542347000";
 
@@ -118,7 +121,7 @@ function App() {
 
   return (
     <HelmetProvider>
-      <Router basename="/class">
+      <Router>
         <ScrollManager />
         <LeaveBehindPopup open={showPopup} onClose={() => setShowPopup(false)} />
         <div className="min-h-screen bg-[#1a1a1a]">
@@ -138,6 +141,9 @@ function App() {
             <Route path="/minecraft-logic" element={<MinecraftLogicSEO />} />
             <Route path="/minecraft-confidence" element={<MinecraftConfidenceSEO />} />
             <Route path="/minecraft-attention" element={<MinecraftAttentionSEO />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/checkout/result" element={<CheckoutResult />} />
+            <Route path="/admin" element={<AdminPanel />} />
           </Routes>
           <Footer />
         </div>

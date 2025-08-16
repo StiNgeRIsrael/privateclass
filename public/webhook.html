@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Handler</title>
+    <script type="module">
+        // מערכת API לחיבור ל-MySQL
+        const API_BASE_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001/api' 
+            : 'https://stingerisrael.co.il/api';
+
+        // פונקציה לשליחת בקשות API
+        async function apiRequest(endpoint, options = {}) {
+            try {
+                const url = `${API_BASE_URL}${endpoint}`;
+                const response = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers,
+                    },
+                    ...options,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error(`API Error (${endpoint}):`, error);
+                throw error;
+            }
+        }
+
+        // פונקציה לעדכון סטטוס תשלום
+        async function updatePaymentStatus(paymentId, status, transactionId = null) {
+            try {
+                return await apiRequest(`/payments/${paymentId}/status`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ status, transactionId }),
+                });
+            } catch (error) {
+                console.error('שגיאה בעדכון סטטוס תשלום:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // פונקציה לקבלת פרטי לקוח
+        async function getCustomerDetails(customerId) {
+            try {
+                return await apiRequest(`/customers/${customerId}`);
+            } catch (error) {
+                console.error('שגיאה בקבלת פרטי לקוח:', error);
+                return null;
+            }
+        }
+
+        // פונקציה לקבלת פרטי תשלום
+        async function getPaymentDetails(paymentId) {
+            try {
+                return await apiRequest(`/payments/${paymentId}`);
+            } catch (error) {
+                console.error('שגיאה בקבלת פרטי תשלום:', error);
+                return null;
+            }
+        }
+
+        // Discord Webhook URL
+        const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1404519345853431962/Z-Q7si_GHrkz5B70UD_0mZ6HfuydH3XHFUB0UyYh0xoxv2Vv5vNq7lQ2VEEAgcGiC6Ke';
+
+        // פונקציה לשליחת הודעה לדיסקורד
+        async function sendDiscordNotification(paymentData, customerData) {
+            try {
+                const embed = {
+                    title: '🎉 תשלום חדש התקבל!',
+                    color: 0x00ff00,
+                    fields: [
+                        {
+                            name: '👤 פרטי לקוח',
+                            value: `**שם הורה:** ${customerData.parent_name}\n**שם ילד:** ${customerData.child_name}\n**טלפון:** ${customerData.parent_phone}\n**אימייל:** ${customerData.parent_email}`,
+                            inline: true
+                        },
+                        {
+                            name: '💰 פרטי תשלום',
+                            value: `**חבילה:** ${paymentData.plan_name}\n**סכום:** ${paymentData.plan_amount} ₪\n**סטטוס:** ${paymentData.status}\n**מזהה עסקה:** ${paymentData.transaction_id || 'לא זמין'}`,
+                            inline: true
+                        },
+                        {
+                            name: '📅 פרטים נוספים',
+                            value: `**גיל ילד:** ${customerData.child_age}\n**רמה:** ${customerData.level}\n**תאריך:** ${new Date(paymentData.created_at).toLocaleDateString('he-IL')}`,
+                            inline: false
+                        }
+                    ],
+                    timestamp: new Date().toISOString(),
+                    footer: {
+                        text: 'Stinger Class - מערכת אוטומטית'
+                    }
+                };
+
+                const payload = {
+                    content: `<@145679462585991169> יש לך תשלום חדש!`,
+                    embeds: [embed]
+                };
+
+                const response = await fetch(DISCORD_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    console.log('✅ הודעה נשלחה לדיסקורד בהצלחה');
+                } else {
+                    console.error('❌ שגיאה בשליחת הודעה לדיסקורד');
+                }
+            } catch (error) {
+                console.error('שגיאה בשליחת הודעה לדיסקורד:', error);
+            }
+        }
+
+        // פונקציה לשליחת הודעה לוואטסאפ
+        function sendWhatsAppNotification(customerData) {
+            try {
+                const message = `שלום! יש לך לקוח חדש שנרשם לשיעור:
+
+👤 **פרטי הלקוח:**
+שם הורה: ${customerData.parent_name}
+שם ילד: ${customerData.child_name}
+טלפון: ${customerData.parent_phone}
+אימייל: ${customerData.parent_email}
+
+📚 **פרטי השיעור:**
+גיל ילד: ${customerData.child_age}
+רמה: ${customerData.level}
+
+אנא צור קשר עם ההורה לתיאום השיעור הראשון.
+
+תודה! 🎮`;
+
+                // יצירת קישור וואטסאפ
+                const whatsappUrl = `https://wa.me/972${customerData.parent_phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                
+                console.log('📱 קישור וואטסאפ:', whatsappUrl);
+                
+                // אפשרות לפתיחת חלון וואטסאפ
+                // window.open(whatsappUrl, '_blank');
+            } catch (error) {
+                console.error('שגיאה בשליחת הודעה לוואטסאפ:', error);
+            }
+        }
+
+        // האזנה להודעות
+        window.addEventListener('message', async (event) => {
+            try {
+                const { type, data } = event.data;
+                
+                if (type === 'IPN_UPDATE') {
+                    const { paymentId, status, transactionId } = data;
+                    
+                    console.log('🔄 עדכון IPN התקבל:', { paymentId, status, transactionId });
+                    
+                    // עדכון סטטוס התשלום
+                    const result = await updatePaymentStatus(paymentId, status, transactionId);
+                    
+                    if (result.success && status === 'paid') {
+                        // קבלת פרטי התשלום
+                        const paymentData = await getPaymentDetails(paymentId);
+                        
+                        if (paymentData) {
+                            // קבלת פרטי הלקוח
+                            const customerData = await getCustomerDetails(paymentData.customer_id);
+                            
+                            if (customerData) {
+                                // שליחת הודעה לדיסקורד
+                                await sendDiscordNotification(paymentData, customerData);
+                                
+                                // שליחת הודעה לוואטסאפ
+                                sendWhatsAppNotification(customerData);
+                                
+                                console.log('✅ כל ההודעות נשלחו בהצלחה');
+                            }
+                        }
+                    }
+                    
+                    // שליחת אישור חזרה
+                    event.source.postMessage({
+                        type: 'IPN_RESPONSE',
+                        success: result.success,
+                        paymentId,
+                        status
+                    }, event.origin);
+                }
+            } catch (error) {
+                console.error('שגיאה בעיבוד IPN:', error);
+                
+                // שליחת שגיאה חזרה
+                if (event.source) {
+                    event.source.postMessage({
+                        type: 'IPN_ERROR',
+                        error: error.message
+                    }, event.origin);
+                }
+            }
+        });
+
+        console.log('Webhook handler loaded and ready (API version)');
+    </script>
+</head>
+<body>
+    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+        <h1>🔄 Webhook Handler</h1>
+        <p>מערכת עיבוד תשלומים פועלת...</p>
+        <div id="status">ממתין לעדכונים...</div>
+    </div>
+</body>
+</html>
