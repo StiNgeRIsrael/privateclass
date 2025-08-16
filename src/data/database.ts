@@ -1,7 +1,7 @@
 // מערכת API לחיבור ל-MySQL
 // זה יעבוד עם השרת Node.js שיצרנו
 
-interface Customer {
+export interface Customer {
   id?: number;
   parent_name: string;
   parent_email: string;
@@ -21,7 +21,7 @@ interface Customer {
   updated_at: string;
 }
 
-interface Payment {
+export interface Payment {
   id?: number;
   customer_id: number;
   customer_name: string;
@@ -39,7 +39,7 @@ interface Payment {
 
 // הגדרות API
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://stingerisrael.co.il/api' 
+  ? 'https://stingerisrael.co.il/class/api' 
   : 'http://localhost:3001/api';
 
 // פונקציה לשליחת בקשות API
@@ -55,18 +55,20 @@ async function apiRequest(endpoint: string, options: RequestInit = {}) {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
 
     return await response.json();
   } catch (error: any) {
     console.error(`API Error (${endpoint}):`, error);
+    alert(`שגיאה: ${error.message}`);
     throw error;
   }
 }
 
 // פונקציות לקוחות
-export const saveNewCustomer = async (customerData: any) => {
+export const saveNewCustomer = async (customerData: Customer) => {
   try {
     const result = await apiRequest('/customers', {
       method: 'POST',
@@ -109,7 +111,7 @@ export const getCustomerById = async (customerId: number) => {
 };
 
 // פונקציות תשלומים
-export const savePayment = async (paymentData: any) => {
+export const savePayment = async (paymentData: Payment) => {
   try {
     const result = await apiRequest('/payments', {
       method: 'POST',

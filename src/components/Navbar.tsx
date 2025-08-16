@@ -1,11 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
-import { Menu, X, AlertTriangle } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [showWarning, setShowWarning] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -22,34 +21,11 @@ const Navbar: React.FC = () => {
   }, [location.pathname]);
 
   const handleRegisterClick = () => {
-    setShowWarning(true);
-    setTimeout(() => {
-      setShowWarning(false);
-      navigate('/checkout');
-    }, 2000); // מעבר לדף ההרשמה אחרי 2 שניות
+    navigate('/checkout');
   };
 
   return (
     <>
-      {/* אזהרה ניסיוני */}
-      {showWarning && (
-        <div className="fixed top-20 left-4 right-4 z-50 bg-yellow-500/90 backdrop-blur-md border border-yellow-400 rounded-lg p-4 shadow-lg animate-in slide-in-from-top-2">
-          <div className="flex items-center gap-3 text-yellow-900">
-            <AlertTriangle size={20} className="flex-shrink-0" />
-            <div>
-              <p className="font-bold">מערכת ניסיונית</p>
-              <p className="text-sm">במידה ותקלה, אנא צרו קשר בוואטסאפ: 054-234-7000</p>
-            </div>
-            <button 
-              onClick={() => setShowWarning(false)}
-              className="ml-auto text-yellow-900 hover:text-yellow-700"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-      )}
-
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled ? 'bg-[#1a1a1a]/95 backdrop-blur-md shadow-lg' : 'bg-transparent'
       }`}>

@@ -69,7 +69,7 @@ function ScrollManager() {
 
 function App() {
   const [showPopup, setShowPopup] = useState(false);
-  const titleInterval = useRef<number | null>(null);
+  const titleInterval = useRef<NodeJS.Timeout | null>(null);
   const originalTitle = useRef(document.title);
 
   useEffect(() => {
@@ -121,7 +121,7 @@ function App() {
 
   return (
     <HelmetProvider>
-      <Router>
+                  <Router basename="/class">
         <ScrollManager />
         <LeaveBehindPopup open={showPopup} onClose={() => setShowPopup(false)} />
         <div className="min-h-screen bg-[#1a1a1a]">

@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { checkExistingCustomer, saveNewCustomer, savePayment } from '../data/database';
+import { AlertTriangle } from 'lucide-react';
+import { Customer, Payment } from '../data/database';
 
 type PlanKey = 'single' | 'three' | 'five';
 type Step = 'existing' | 'register' | 'plan';
@@ -178,7 +180,26 @@ function RegistrationForm({ defaults, onSubmit }: { defaults: any; onSubmit: (da
     setError('');
 
     try {
-      const result = await saveNewCustomer(form);
+      const customerData: Customer = {
+        parent_name: form.parentName,
+        parent_email: form.parentEmail,
+        parent_phone: form.parentPhone,
+        child_name: form.childName,
+        child_age: form.childAge,
+        child_gender: form.childGender,
+        level: form.level,
+        knows_now: form.knowsNow,
+        goals: form.goals,
+        other_goal: form.otherGoal,
+        notes: form.notes,
+        agree_contact: form.agreeContact,
+        agree_terms: form.agreeTerms,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const result = await saveNewCustomer(customerData);
       
       if (result.success) {
         onSubmit({ ...form, customerId: result.customerId });
@@ -198,6 +219,16 @@ function RegistrationForm({ defaults, onSubmit }: { defaults: any; onSubmit: (da
       <div className="text-center mb-8">
         <h1 className="text-4xl font-handjet text-green-500 mb-4">פרטי הרשמה 📝</h1>
         <p className="text-xl text-gray-300">נשמח להכיר אתכם ואת ילדכם</p>
+      </div>
+
+      <div className="bg-yellow-500/90 backdrop-blur-md border border-yellow-400 rounded-lg p-4 shadow-lg mb-4">
+        <div className="flex items-center gap-3 text-yellow-900">
+          <AlertTriangle size={20} className="flex-shrink-0" />
+          <div>
+            <p className="font-bold">מערכת ניסיונית</p>
+            <p className="text-sm">במידה ותקלה, אנא צרו קשר בוואטסאפ: 054-234-7000</p>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -397,15 +428,17 @@ function PlanStep({ customer }: { customer: any }) {
   const start = async (p: { key: PlanKey; name: string; amount: number; paymentUrl: string }) => {
     try {
       // שמירת פרטי התשלום ב-Firebase
-      const paymentData = {
-        customerId: customer.id || customer.customerId,
-        customerName: customer.parentName,
-        customerEmail: customer.parentEmail,
-        customerPhone: customer.parentPhone,
-        planKey: p.key,
-        planAmount: p.amount,
-        planName: p.name,
-        status: 'pending'
+      const paymentData: Payment = {
+        customer_id: customer.id || customer.customerId,
+        customer_name: customer.parentName,
+        customer_email: customer.parentEmail,
+        customer_phone: customer.parentPhone,
+        plan_key: p.key,
+        plan_amount: p.amount,
+        plan_name: p.name,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       const result = await savePayment(paymentData);

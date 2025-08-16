@@ -7,7 +7,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
-  // base: '/class/', // הסרתי את זה לפיתוח
+  base: '/class/',
   build: {
     rollupOptions: {
       output: {
