@@ -522,6 +522,17 @@ export const Checkout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] pt-20">
+      {/* באנר אזהרה קבוע */}
+      <div className="bg-yellow-500/90 backdrop-blur-md border border-yellow-400 rounded-lg p-4 shadow-lg mx-4 mb-6">
+        <div className="flex items-center gap-3 text-yellow-900">
+          <AlertTriangle size={20} className="flex-shrink-0" />
+          <div>
+            <p className="font-bold">מערכת ניסיונית</p>
+            <p className="text-sm">במידה ותקלה, אנא צרו קשר בוואטסאפ: 054-234-7000</p>
+          </div>
+        </div>
+      </div>
+
       <ProgressSteps currentStep={step} />
       
       {step === 'existing' && (
