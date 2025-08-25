@@ -30,7 +30,7 @@ const Testimonials: React.FC = () => {
                 <User className="w-6 h-6 text-green-500" />
               </div>
               <div className="mr-4">
-                <h4 className="font-handjet text-green-500">שירן - אמא של אושר (בן 7)</h4>
+                <h4 className="font-handjet text-green-500">שירן, אמא של אושר בן ה-7</h4>
               </div>
             </div>
             <p className="text-gray-300 leading-relaxed">

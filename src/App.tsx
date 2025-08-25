@@ -17,6 +17,8 @@ import MinecraftAttentionSEO from './components/MinecraftAttentionSEO';
 import Checkout from './components/Checkout';
 import CheckoutResult from './components/CheckoutResult';
 import AdminPanel from './components/AdminPanel';
+import ConnectionTester from './components/ConnectionTester';
+import TestPage from './components/TestPage';
 import NotFound from './components/NotFound';
 
 const WHATSAPP_URL = "https://wa.me/972542347000";
@@ -145,6 +147,7 @@ function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/checkout/result" element={<CheckoutResult />} />
             <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/test" element={<TestPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />
