@@ -1,567 +1,663 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { checkExistingCustomer, saveNewCustomer, savePayment } from '../data/database';
-import { AlertTriangle } from 'lucide-react';
-import { Customer, Payment } from '../data/database';
+import { sendToWebhook } from '../data/database';
+import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Heart, Star, Trophy, Users, Clock, Target } from 'lucide-react';
 
 type PlanKey = 'single' | 'three' | 'five';
-type Step = 'existing' | 'register' | 'plan';
 
-const PLANS: Record<PlanKey, { name: string; amount: number; paymentUrl: string }> = {
+const PLANS: Record<PlanKey, { name: string; amount: number; paymentUrl: string; features: string[] }> = {
   single: { 
-    name: 'שיעור 1', 
+    name: 'שיעור אחד', 
     amount: 180,
-    paymentUrl: 'https://app.upay.co.il/API6/s.php?m=c3JjQXkvTmllRmxtWEd6Y1RManlzUT09'
+    paymentUrl: 'https://app.upay.co.il/API6/s.php?m=c3JjQXkvTmllRmxtWEd6Y1RManlzUT09',
+    features: ['שיעור פרטי אחד', '60 דקות', 'התאמה אישית', 'דוח התקדמות']
   },
   three: { 
-    name: '3 שיעורים', 
+    name: 'חבילת 3 שיעורים', 
     amount: 480,
-    paymentUrl: 'https://app.upay.co.il/API6/s.php?m=VEl1WGdKVEVhK29oRnUwY1N3ZHdqZz09'
+    paymentUrl: 'https://app.upay.co.il/API6/s.php?m=VEl1WGdKVEVhK29oRnUwY1N3ZHdqZz09',
+    features: ['3 שיעורים פרטיים', 'הנחה של ₪60', 'תוכנית התקדמות', 'מעקב מתמשך']
   },
   five: { 
-    name: '5 שיעורים', 
+    name: 'חבילת 5 שיעורים', 
     amount: 700,
-    paymentUrl: 'https://app.upay.co.il/API6/s.php?m=UWJFSmhjZW4xcHFFUzdLWnlBczczQT09'
+    paymentUrl: 'https://app.upay.co.il/API6/s.php?m=UWJFSmhjZW4xcHFFUzdLWnlBczczQT09',
+    features: ['5 שיעורים פרטיים', 'הנחה של ₪200', 'תוכנית מקיפה', 'תמיכה מלאה']
   },
 };
 
-// קומפוננטת התקדמות
-function ProgressSteps({ currentStep }: { currentStep: Step }) {
-  const steps = [
-    { key: 'existing' as Step, title: 'בדיקת לקוח', number: 1 },
-    { key: 'register' as Step, title: 'פרטי הרשמה', number: 2 },
-    { key: 'plan' as Step, title: 'בחירת מסלול', number: 3 }
-  ];
-
-  const getStepIndex = (step: Step) => {
-    return steps.findIndex(s => s.key === step);
-  };
-
-  const currentIndex = getStepIndex(currentStep);
-
-  return (
-    <div className="max-w-4xl mx-auto mb-8">
-      <div className="flex items-center justify-center space-x-4 rtl:space-x-reverse">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.key}>
-            <div className="flex flex-col items-center">
-              <div className={`
-                w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-all duration-300
-                ${index <= currentIndex 
-                  ? 'bg-green-500 text-black' 
-                  : 'bg-gray-600 text-gray-300'
-                }
-              `}>
-                {step.number}
-              </div>
-              <span className={`
-                mt-2 text-sm font-medium transition-colors duration-300
-                ${index <= currentIndex ? 'text-green-400' : 'text-gray-400'}
-              `}>
-                {step.title}
-              </span>
-            </div>
-            {index < steps.length - 1 && (
-              <div className={`
-                flex-1 h-1 transition-colors duration-300
-                ${index < currentIndex ? 'bg-green-500' : 'bg-gray-600'}
-              `} />
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
+interface CustomerData {
+  parent_name: string;
+  parent_email: string;
+  parent_phone: string;
+  child_name: string;
+  child_age: string;
+  child_gender: string;
+  level: string;
+  knows_now?: string;
+  goals?: string[];
+  other_goal?: string;
+  notes?: string;
+  agree_contact: boolean;
+  agree_terms: boolean;
+  child_personality?: string;
+  child_interests?: string[];
+  child_challenges?: string[];
+  child_achievements?: string;
+  child_schedule?: string;
+  child_friends?: string;
 }
 
-function ExistingCustomerStep({ onFound, onNotFound }: { onFound: (cust: any) => void; onNotFound: (email: string, phone: string) => void }) {
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [isChecking, setIsChecking] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleCheckCustomer = async () => {
-    if (!email || !phone) {
-      setError('אנא הזינו אימייל וטלפון');
-      return;
-    }
-
-    setIsChecking(true);
-    setError('');
-
-    try {
-      const result = await checkExistingCustomer(email, phone);
-      
-      if (result.exists) {
-        onFound(result.customer);
-      } else {
-        onNotFound(email, phone);
-      }
-    } catch (error) {
-      setError('שגיאה בבדיקת לקוח. אנא נסו שוב.');
-      console.error('שגיאה בבדיקת לקוח:', error);
-    } finally {
-      setIsChecking(false);
-    }
-  };
-
-  return (
-    <div dir="rtl" className="max-w-2xl mx-auto p-6">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-handjet text-green-500 mb-4">ברוכים הבאים! 🎮</h1>
-        <p className="text-xl text-gray-300 mb-6">בואו נתחיל את המסע שלכם בעולם המיינקראפט</p>
-      </div>
-      
-      <div className="bg-[#2a2a2a] rounded-lg p-8 shadow-lg">
-        <h2 className="text-2xl font-handjet text-green-400 mb-6 text-center">האם אתם לקוחות קיימים?</h2>
-        <p className="text-gray-300 mb-8 text-center">הזינו את פרטי הקשר שלכם ונבדוק אם אתם כבר רשומים במערכת</p>
-        
-        {error && (
-          <div className="bg-red-500/20 border border-red-500 text-red-300 p-4 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
-        
-        <div className="space-y-6">
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium">אימייל הורה</label>
-            <input 
-              className="w-full p-4 bg-[#1a1a1a] rounded-lg text-gray-100 border border-gray-600 focus:border-green-500 focus:outline-none transition-colors" 
-              placeholder="הזינו את האימייל שלכם" 
-              value={email} 
-              onChange={e => setEmail(e.target.value)}
-              disabled={isChecking}
-              type="email"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium">טלפון הורה</label>
-            <input 
-              className="w-full p-4 bg-[#1a1a1a] rounded-lg text-gray-100 border border-gray-600 focus:border-green-500 focus:outline-none transition-colors" 
-              placeholder="הזינו את הטלפון שלכם" 
-              value={phone} 
-              onChange={e => setPhone(e.target.value)}
-              disabled={isChecking}
-              type="tel"
-            />
-          </div>
-          
-          <button 
-            className="w-full minecraft-button text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={handleCheckCustomer}
-            disabled={isChecking}
-          >
-            {isChecking ? 'בודק...' : 'בדוק אם אני לקוח קיים'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+interface Question {
+  id: string;
+  title: string;
+  subtitle: string;
+  type: 'text' | 'email' | 'tel' | 'select' | 'number' | 'multiselect' | 'textarea' | 'checkbox';
+  field: keyof CustomerData;
+  options?: string[];
+  placeholder?: string;
+  required: boolean;
+  icon?: React.ReactNode;
 }
 
-function RegistrationForm({ defaults, onSubmit }: { defaults: any; onSubmit: (data: any) => void }) {
-  const [form, setForm] = useState({
-    parentName: '', parentEmail: defaults.parentEmail || '', parentPhone: defaults.parentPhone || '',
-    childName: '', childAge: '', childGender: '', level: '', knowsNow: '', goals: [] as string[], otherGoal: '', notes: '',
-    agreeContact: false, agreeTerms: false,
+const QUESTIONS: Question[] = [
+  {
+    id: 'parent_name',
+    title: 'מה השם שלך? (ההורה)',
+    subtitle: 'נשמח להכיר אותך!',
+    type: 'text',
+    field: 'parent_name',
+    placeholder: 'השם המלא שלך',
+    required: true,
+    icon: <Heart className="w-6 h-6" />
+  },
+  {
+    id: 'parent_email',
+    title: 'מה האימייל שלך? (ההורה)',
+    subtitle: 'כדי שנוכל לשלוח לך עדכונים',
+    type: 'email',
+    field: 'parent_email',
+    placeholder: 'example@email.com',
+    required: true,
+    icon: <Star className="w-6 h-6" />
+  },
+            {
+            id: 'parent_phone',
+            title: 'מה הטלפון שלך? (ההורה)',
+            subtitle: 'כדי שנוכל ליצור איתך קשר',
+            type: 'tel',
+            field: 'parent_phone',
+            placeholder: 'לדוגמה.. 054-2347000',
+            required: true,
+            icon: <Users className="w-6 h-6" />
+          },
+  {
+    id: 'child_name',
+    title: 'מה השם של הילד/ה שלך?',
+    subtitle: 'נשמח להכיר את הילד/ה שלך!',
+    type: 'text',
+    field: 'child_name',
+    placeholder: 'שם הילד/ה',
+    required: true,
+    icon: <Heart className="w-6 h-6" />
+  },
+  {
+    id: 'child_age',
+    title: 'בן/בת כמה הילד/ה שלך?',
+    subtitle: 'כדי שנוכל להתאים את השיעור לגיל',
+    type: 'number',
+    field: 'child_age',
+    placeholder: 'גיל',
+    required: true,
+    icon: <Clock className="w-6 h-6" />
+  },
+            {
+            id: 'child_gender',
+            title: 'מה המגדר של הילד/ה שלך?',
+            subtitle: 'כדי שנוכל לפנות אליו/אליה נכון',
+            type: 'select',
+            field: 'child_gender',
+            options: ['זכר', 'נקבה', 'מעדיף לא לענות'],
+            required: true,
+            icon: <Users className="w-6 h-6" />
+          },
+  {
+    id: 'child_personality',
+    title: 'איך היית מתאר/ת את האישיות של הילד/ה שלך?',
+    subtitle: 'זה יעזור לנו להתאים את סגנון ההוראה',
+    type: 'select',
+    field: 'child_personality',
+    options: ['שקט/ה ומרוכז/ת', 'חברותי/ת ואנרגטי/ת', 'יצירתי/ת ודמיוני/ת', 'לוגי/ת ומסודר/ת', 'סקרן/ית וחקרן/ית'],
+    required: false,
+    icon: <Heart className="w-6 h-6" />
+  },
+  {
+    id: 'child_interests',
+    title: 'במה הילד/ה שלך מתעניין/ת?',
+    subtitle: 'בחר/י את כל האפשרויות הרלוונטיות',
+    type: 'multiselect',
+    field: 'child_interests',
+    options: ['משחקי מחשב', 'בנייה ויצירה', 'מדע וטכנולוגיה', 'אמנות ועיצוב', 'טבע ובעלי חיים', 'מוזיקה', 'ספורט', 'קריאה', 'מתמטיקה', 'היסטוריה'],
+    required: false,
+    icon: <Star className="w-6 h-6" />
+  },
+  {
+    id: 'child_challenges',
+    title: 'באיזה תחומים הילד/ה שלך מתקשה?',
+    subtitle: 'כדי שנוכל לעזור לו/לה להתקדם',
+    type: 'multiselect',
+    field: 'child_challenges',
+    options: ['ריכוז והתמדה', 'עבודת צוות', 'פתרון בעיות', 'יצירתיות', 'אנגלית', 'מתמטיקה', 'סבלנות', 'אין קשיים מיוחדים'],
+    required: false,
+    icon: <Target className="w-6 h-6" />
+  },
+  {
+    id: 'child_achievements',
+    title: 'מה הישגים מיוחדים של הילד/ה שלך?',
+    subtitle: 'שתף/י איתנו במה הוא/היא גאה/ה',
+    type: 'textarea',
+    field: 'child_achievements',
+    placeholder: 'למשל: זכה בתחרות, סיים פרויקט מיוחד, עזר לחבר...',
+    required: false,
+    icon: <Trophy className="w-6 h-6" />
+  },
+  {
+    id: 'child_schedule',
+    title: 'מתי הילד/ה שלך פנוי/ה לשיעורים?',
+    subtitle: 'כדי שנוכל לתאם זמנים נוחים',
+    type: 'select',
+    field: 'child_schedule',
+    options: ['אחר הצהריים (14:00-17:00)', 'ערב (17:00-20:00)', 'סופי שבוע', 'גמיש - כל זמן', 'אני לא בטוח/ה'],
+    required: false,
+    icon: <Clock className="w-6 h-6" />
+  },
+  {
+    id: 'child_friends',
+    title: 'האם הילד/ה שלך אוהב/ת לשחק עם חברים?',
+    subtitle: 'זה יעזור לנו להחליט על שיעורים פרטיים או קבוצתיים',
+    type: 'select',
+    field: 'child_friends',
+    options: ['כן, מאוד חברותי/ת', 'כן, אבל מעדיף/ה קבוצות קטנות', 'לא, מעדיף/ה לשחק לבד', 'תלוי במצב הרוח'],
+    required: false,
+    icon: <Users className="w-6 h-6" />
+  },
+  {
+    id: 'level',
+    title: 'מה הרמה של הילד/ה שלך במיינקראפט?',
+    subtitle: 'כדי שנוכל להתאים את התוכן',
+    type: 'select',
+    field: 'level',
+    options: ['מתחיל/ה - עוד לא שיחק/ה', 'מתחיל/ה - שיחק/ה קצת', 'בינוני/ת - יודע/ת את הבסיס', 'מתקדם/ת - יודע/ת הרבה', 'מומחה/ית - יודע/ת הכל'],
+    required: true,
+    icon: <Trophy className="w-6 h-6" />
+  },
+  {
+    id: 'knows_now',
+    title: 'מה הילד/ה שלך כבר יודע/ת לעשות במיינקראפט?',
+    subtitle: 'תאר/י לנו את היכולות הנוכחיות',
+    type: 'textarea',
+    field: 'knows_now',
+    placeholder: 'למשל: יודע לבנות בית פשוט, מכיר את הבסיס של המשחק...',
+    required: false,
+    icon: <Star className="w-6 h-6" />
+  },
+  {
+    id: 'goals',
+    title: 'מה המטרות שלכם מהשיעורים?',
+    subtitle: 'בחר/י את כל המטרות הרלוונטיות',
+    type: 'multiselect',
+    field: 'goals',
+    options: ['שיפור מיומנויות טכניות', 'פיתוח יצירתיות', 'שיפור עבודת צוות', 'לימוד אנגלית', 'פיתוח חשיבה לוגית', 'הכנה לתחרויות', 'בילוי זמן איכות', 'פיתוח ביטחון עצמי'],
+    required: false,
+    icon: <Target className="w-6 h-6" />
+  },
+  {
+    id: 'notes',
+    title: 'האם יש משהו נוסף שחשוב לנו לדעת?',
+    subtitle: 'כל מידע נוסף יעזור לנו להתאים את השיעור',
+    type: 'textarea',
+    field: 'notes',
+    placeholder: 'הערות נוספות, העדפות מיוחדות, צרכים מיוחדים...',
+    required: false,
+    icon: <Heart className="w-6 h-6" />
+  }
+];
+
+const Checkout: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStepType, setCurrentStepType] = useState<'questions' | 'plans' | 'payment' | 'success'>('questions');
+  const [customerData, setCustomerData] = useState<CustomerData>({
+    parent_name: '',
+    parent_email: '',
+    parent_phone: '',
+    child_name: '',
+    child_age: '',
+    child_gender: '',
+    level: '',
+    goals: [],
+    agree_contact: false,
+    agree_terms: false
   });
+          const [selectedPlan, setSelectedPlan] = useState<PlanKey>('five');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const update = (k: string, v: any) => setForm(s => ({ ...s, [k]: v }));
-  const toggleGoal = (g: string) => setForm(s => ({ ...s, goals: s.goals.includes(g) ? s.goals.filter(x => x !== g) : [...s.goals, g] }));
-  const canSubmit = form.parentName && form.parentEmail && form.parentPhone && form.childName && form.childAge && form.childGender && form.level && form.agreeContact && form.agreeTerms;
+  // בדיקה אם יש פרמטרים ב-URL
+  React.useEffect(() => {
+    const plan = searchParams.get('plan') as PlanKey;
+    if (plan && PLANS[plan]) {
+      setSelectedPlan(plan);
+    }
+  }, [searchParams]);
+
+  const handleInputChange = (field: keyof CustomerData, value: any) => {
+    setCustomerData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleMultiSelectChange = (field: keyof CustomerData, value: string) => {
+    const currentValues = customerData[field] as string[] || [];
+    const newValues = currentValues.includes(value)
+      ? currentValues.filter(v => v !== value)
+      : [...currentValues, value];
+    handleInputChange(field, newValues);
+  };
+
+  const handleNext = () => {
+    if (currentStep < QUESTIONS.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      setCurrentStepType('plans');
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handlePlanSelect = (plan: PlanKey) => {
+    setSelectedPlan(plan);
+  };
+
+  const validateCurrentQuestion = (): boolean => {
+    const question = QUESTIONS[currentStep];
+    if (!question.required) return true;
+    
+    const value = customerData[question.field];
+    if (Array.isArray(value)) {
+      return value.length > 0;
+    }
+    return !!value;
+  };
+
+  const isCurrentFieldEmpty = () => {
+    const currentQuestion = QUESTIONS[currentStep];
+    const value = customerData[currentQuestion.field];
+    
+    if (Array.isArray(value)) {
+      return value.length === 0;
+    }
+    return !value || value.toString().trim() === '';
+  };
+
+  const getNextButtonText = () => {
+    if (currentStep === QUESTIONS.length - 1) {
+      return 'המשך לחבילות';
+    }
+    
+    if (isCurrentFieldEmpty() && !QUESTIONS[currentStep].required) {
+      return 'דלג';
+    }
+    
+    return 'המשך';
+  };
 
   const handleSubmit = async () => {
-    if (!canSubmit) return;
-
     setIsSubmitting(true);
     setError('');
 
     try {
-      const customerData: Customer = {
-        parent_name: form.parentName,
-        parent_email: form.parentEmail,
-        parent_phone: form.parentPhone,
-        child_name: form.childName,
-        child_age: form.childAge,
-        child_gender: form.childGender,
-        level: form.level,
-        knows_now: form.knowsNow,
-        goals: form.goals,
-        other_goal: form.otherGoal,
-        notes: form.notes,
-        agree_contact: form.agreeContact,
-        agree_terms: form.agreeTerms,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+      const paymentData = {
+        plan_key: selectedPlan,
+        plan_name: PLANS[selectedPlan].name,
+        plan_amount: PLANS[selectedPlan].amount,
+        payment_url: PLANS[selectedPlan].paymentUrl
       };
 
-      const result = await saveNewCustomer(customerData);
-      
-      if (result.success) {
-        onSubmit({ ...form, customerId: result.customerId });
-      } else {
-        setError('שגיאה בשמירת פרטים. אנא נסו שוב.');
-      }
-    } catch (error) {
-      setError('שגיאה בשמירת פרטים. אנא נסו שוב.');
-      console.error('שגיאה בשמירת לקוח:', error);
+      // שמירת נתונים ב-localStorage
+      localStorage.setItem('customerData', JSON.stringify(customerData));
+      localStorage.setItem('paymentData', JSON.stringify(paymentData));
+
+      // מעבר לתשלום
+      window.location.href = PLANS[selectedPlan].paymentUrl;
+    } catch (error: any) {
+      setError('שגיאה בהכנת התשלום: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <div dir="rtl" className="max-w-4xl mx-auto p-6">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-handjet text-green-500 mb-4">פרטי הרשמה 📝</h1>
-        <p className="text-xl text-gray-300">נשמח להכיר אתכם ואת ילדכם</p>
-      </div>
+  // טיימר להעברה לדף התוצאה אחרי 20 שניות
+  React.useEffect(() => {
+    if (currentStepType === 'payment') {
+      const timer = setTimeout(() => {
+        window.location.href = '/checkout/result?status=success';
+      }, 20000); // 20 שניות
 
-      <div className="bg-yellow-500/90 backdrop-blur-md border border-yellow-400 rounded-lg p-4 shadow-lg mb-4">
-        <div className="flex items-center gap-3 text-yellow-900">
-          <AlertTriangle size={20} className="flex-shrink-0" />
-          <div>
-            <p className="font-bold">מערכת ניסיונית</p>
-            <p className="text-sm">במידה ותקלה, אנא צרו קשר בוואטסאפ: 054-234-7000</p>
+      return () => clearTimeout(timer);
+    }
+  }, [currentStepType]);
+
+  const handlePaymentSuccess = () => {
+    setCurrentStepType('success');
+  };
+
+  const getProgressPercentage = () => {
+    if (currentStepType === 'questions') {
+      return ((currentStep + 1) / QUESTIONS.length) * 100;
+    }
+    if (currentStepType === 'plans') return 100;
+    return 100;
+  };
+
+  if (currentStepType === 'success') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-900 via-gray-900 to-blue-900 flex items-center justify-center p-4">
+        <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl p-8 max-w-md w-full text-center border border-green-500/30">
+          <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6 animate-bounce" />
+          <h2 className="text-3xl font-bold text-white mb-4">ההרשמה הושלמה בהצלחה! 🎉</h2>
+          <p className="text-gray-300 mb-6 text-lg">
+            תודה על ההרשמה, {customerData.parent_name}! 
+            <br />
+            נציג יצור איתך קשר בקרוב.
+          </p>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all transform hover:scale-105"
+          >
+            חזרה לדף הבית
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentStepType === 'payment') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-900 via-gray-900 to-blue-900 flex items-center justify-center p-4">
+        <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl p-8 max-w-md w-full text-center border border-green-500/30">
+          <Trophy className="w-20 h-20 text-yellow-500 mx-auto mb-6 animate-pulse" />
+          <h2 className="text-3xl font-bold text-white mb-4">העברת לתשלום 💳</h2>
+          <p className="text-gray-300 mb-6 text-lg">
+            הנתונים נשלחו בהצלחה! 
+            <br />
+            כעת תועבר/י לדף התשלום.
+          </p>
+          <div className="space-y-4">
+            <button
+              onClick={() => window.open(PLANS[selectedPlan].paymentUrl, '_blank')}
+              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-bold w-full transition-all transform hover:scale-105"
+            >
+              המשך לתשלום
+            </button>
+            <p className="text-sm text-gray-400 mt-4">
+              אם התשלום לא נפתח אוטומטית, לחץ על הכפתור למעלה
+            </p>
           </div>
         </div>
       </div>
+    );
+  }
 
-      {error && (
-        <div className="bg-red-500/20 border border-red-500 text-red-300 p-4 rounded-lg mb-6">
-          {error}
-        </div>
-      )}
-
-      <div className="bg-[#2a2a2a] rounded-lg p-8 shadow-lg">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* פרטי הורה */}
-          <div className="md:col-span-2">
-            <h3 className="text-xl font-handjet text-green-400 mb-4">👨‍👩‍👧‍👦 פרטי הורה</h3>
-          </div>
-          
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium">שם הורה (מלא)</label>
-            <input 
-              className="w-full p-3 bg-[#1a1a1a] rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none transition-colors" 
-              placeholder="הזינו את שמכם המלא"
-              onChange={e=>update('parentName', e.target.value)} 
-              disabled={isSubmitting} 
-            />
-          </div>
-          
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium">אימייל הורה</label>
-            <input 
-              className="w-full p-3 bg-[#1a1a1a] rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none transition-colors" 
-              placeholder="הזינו את האימייל שלכם"
-              value={form.parentEmail} 
-              onChange={e=>update('parentEmail', e.target.value)} 
-              disabled={isSubmitting}
-              type="email"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium">טלפון הורה</label>
-            <input 
-              className="w-full p-3 bg-[#1a1a1a] rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none transition-colors" 
-              placeholder="הזינו את הטלפון שלכם"
-              value={form.parentPhone} 
-              onChange={e=>update('parentPhone', e.target.value)} 
-              disabled={isSubmitting}
-              type="tel"
-            />
-          </div>
-
-          {/* פרטי ילד */}
-          <div className="md:col-span-2">
-            <h3 className="text-xl font-handjet text-green-400 mb-4 mt-6">👶 פרטי ילד</h3>
-          </div>
-          
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium">שם ילדכם</label>
-            <input 
-              className="w-full p-3 bg-[#1a1a1a] rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none transition-colors" 
-              placeholder="הזינו את שם ילדכם"
-              onChange={e=>update('childName', e.target.value)} 
-              disabled={isSubmitting} 
-            />
-          </div>
-          
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium">גיל</label>
-            <input 
-              className="w-full p-3 bg-[#1a1a1a] rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none transition-colors" 
-              placeholder="הזינו את הגיל"
-              onChange={e=>update('childAge', e.target.value)} 
-              disabled={isSubmitting}
-              type="number"
-              min="4"
-              max="18"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium">מין</label>
-            <select 
-              className="w-full p-3 bg-[#1a1a1a] rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none transition-colors" 
-              onChange={e=>update('childGender', e.target.value)} 
-              disabled={isSubmitting}
-            >
-              <option value="">בחרו מין</option>
-              <option value="זכר">זכר</option>
-              <option value="נקבה">נקבה</option>
-              <option value="לא מצוין">מעדיף לא לענות</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium">רמה</label>
-            <select 
-              className="w-full p-3 bg-[#1a1a1a] rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none transition-colors" 
-              onChange={e=>update('level', e.target.value)} 
-              disabled={isSubmitting}
-            >
-              <option value="">בחרו רמה</option>
-              <option value="מתחיל">מתחיל</option>
-              <option value="בינוני">בינוני</option>
-              <option value="מתקדם">מתקדם</option>
-            </select>
-          </div>
-
-          {/* ידע ומטרות */}
-          <div className="md:col-span-2">
-            <label className="block text-gray-300 mb-2 font-medium">מה ילדכם יודע לעשות היום?</label>
-            <input 
-              className="w-full p-3 bg-[#1a1a1a] rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none transition-colors" 
-              placeholder="תארו את הידע הנוכחי של ילדכם במיינקראפט"
-              onChange={e=>update('knowsNow', e.target.value)} 
-              disabled={isSubmitting} 
-            />
-          </div>
-          
-          <div className="md:col-span-2">
-            <label className="block text-gray-300 mb-2 font-medium">מה המטרה של ילדכם? (בחירה מרובה)</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {['ריכוז והתמדה','לוגיקה־רדסטון','עבודת צוות','יצירתיות־עיצוב','אנגלית דרך המשחק','אחר'].map(g => (
-                <label key={g} className="flex items-center gap-3 bg-[#1a1a1a] p-3 rounded-lg border border-gray-600 hover:border-green-500 transition-colors cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    onChange={()=>toggleGoal(g)} 
-                    disabled={isSubmitting}
-                    className="w-4 h-4 text-green-500"
-                  />
-                  <span className="text-gray-300">{g}</span>
-                </label>
-              ))}
-            </div>
-            {form.goals.includes('אחר') && (
-              <input 
-                className="mt-3 w-full p-3 bg-[#1a1a1a] rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none transition-colors" 
-                placeholder="פירוט מטרה נוספת"
-                onChange={e=>update('otherGoal', e.target.value)} 
-                disabled={isSubmitting} 
+  if (currentStepType === 'plans') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-900 via-gray-900 to-blue-900 pt-20">
+        <div className="max-w-6xl mx-auto px-4">
+          {/* Progress Bar */}
+          <div className="mb-8 mt-8">
+            <div className="bg-gray-700 rounded-full h-3 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-green-500 to-blue-500 h-full transition-all duration-1000 ease-out"
+                style={{ width: `${getProgressPercentage()}%` }}
               />
+            </div>
+            <p className="text-center text-gray-300 mt-2">100% הושלם! 🎉</p>
+          </div>
+
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-white mb-4">בחר/י את החבילה המתאימה לכם 💎</h1>
+            <p className="text-xl text-gray-300">תבסס על המידע שסיפקת, הנה ההמלצות שלנו</p>
+          </div>
+
+          {error && (
+            <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4 mb-6 flex items-center max-w-2xl mx-auto">
+              <AlertTriangle className="w-6 h-6 text-red-400 mr-3" />
+              <span className="text-red-300">{error}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            {Object.entries(PLANS).map(([key, plan]) => (
+              <div
+                key={key}
+                className={`
+                  relative p-8 rounded-2xl border-2 transition-all duration-300 transform hover:scale-105
+                  ${selectedPlan === key 
+                    ? 'border-green-500 bg-gradient-to-br from-green-900/50 to-blue-900/50 shadow-2xl shadow-green-500/20' 
+                    : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
+                  }
+                `}
+              >
+                {key === 'five' && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-green-500 text-white px-4 py-1 rounded-full text-sm font-bold">
+                      מומלץ
+                    </div>
+                  </div>
+                )}
+                
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
+                  <div className="text-4xl font-bold text-green-400 mb-6">₪{plan.amount}</div>
+                  
+                  <ul className="space-y-3 mb-8">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-center text-gray-300">
+                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  <button
+                    onClick={() => handlePlanSelect(key as PlanKey)}
+                    className={`
+                      w-full py-4 px-6 rounded-xl font-bold transition-all
+                      ${selectedPlan === key
+                        ? 'bg-gradient-to-r from-green-600 to-blue-600 text-white'
+                        : 'bg-gray-700 hover:bg-gray-600 text-white'
+                      }
+                    `}
+                  >
+                    {selectedPlan === key ? 'נבחר' : 'בחר חבילה'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center">
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className={`
+                bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 
+                text-white px-12 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105
+                ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}
+              `}
+            >
+              {isSubmitting ? 'שולח...' : 'המשך לתשלום'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const currentQuestion = QUESTIONS[currentStep];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-900 via-gray-900 to-blue-900 pt-20">
+      <div className="max-w-2xl mx-auto px-4">
+        {/* Progress Bar */}
+        <div className="mb-8 mt-8">
+          <div className="bg-gray-700 rounded-full h-3 overflow-hidden">
+            <div 
+              className="bg-gradient-to-r from-green-500 to-blue-500 h-full transition-all duration-1000 ease-out"
+              style={{ width: `${getProgressPercentage()}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Question Card */}
+        <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl p-10 border border-gray-600/50 shadow-2xl max-w-4xl mx-auto">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mb-6 shadow-lg">
+              {currentQuestion.icon}
+            </div>
+            <h2 className="text-4xl font-bold text-white mb-3">{currentQuestion.title}</h2>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">{currentQuestion.subtitle}</p>
+          </div>
+
+          {/* Input Field */}
+          <div className="mb-10 max-w-2xl mx-auto">
+            {(currentQuestion.type === 'text' || currentQuestion.type === 'email' || currentQuestion.type === 'tel') && (
+              <div>
+                <input
+                  type={currentQuestion.type}
+                  value={customerData[currentQuestion.field] as string || ''}
+                  onChange={(e) => handleInputChange(currentQuestion.field, e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && validateCurrentQuestion()) {
+                      handleNext();
+                    }
+                  }}
+                  placeholder={currentQuestion.placeholder}
+                  className="w-full bg-gray-700 border-2 border-gray-600 rounded-xl px-8 py-5 text-white text-xl focus:border-green-500 focus:outline-none transition-all shadow-lg text-center"
+                />
+              </div>
+            )}
+
+            {currentQuestion.type === 'number' && (
+              <div>
+                <input
+                  type="number"
+                  value={customerData[currentQuestion.field] as string || ''}
+                  onChange={(e) => handleInputChange(currentQuestion.field, e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && validateCurrentQuestion()) {
+                      handleNext();
+                    }
+                  }}
+                  placeholder={currentQuestion.placeholder}
+                  min="1"
+                  max="18"
+                  className="w-full bg-gray-700 border-2 border-gray-600 rounded-xl px-8 py-5 text-white text-xl focus:border-green-500 focus:outline-none transition-all shadow-lg text-center"
+                />
+              </div>
+            )}
+
+            {currentQuestion.type === 'select' && currentQuestion.options && (
+              <div>
+                <select
+                  value={customerData[currentQuestion.field] as string || ''}
+                  onChange={(e) => handleInputChange(currentQuestion.field, e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && validateCurrentQuestion()) {
+                      handleNext();
+                    }
+                  }}
+                  className="w-full bg-gray-700 border-2 border-gray-600 rounded-xl px-8 py-5 text-white text-xl focus:border-green-500 focus:outline-none transition-all shadow-lg text-center"
+                >
+                  <option value="">בחר/י אפשרות</option>
+                  {currentQuestion.options.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {currentQuestion.type === 'multiselect' && currentQuestion.options && (
+              <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
+                  {currentQuestion.options.map((option) => (
+                    <label key={option} className="flex items-center p-5 bg-gray-700 rounded-xl border-2 border-gray-600 hover:border-green-500 transition-all cursor-pointer shadow-lg hover:shadow-xl">
+                      <input
+                        type="checkbox"
+                        checked={(customerData[currentQuestion.field] as string[] || []).includes(option)}
+                        onChange={() => handleMultiSelectChange(currentQuestion.field, option)}
+                        className="w-6 h-6 text-green-500 mr-4"
+                      />
+                      <span className="text-white text-lg">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {currentQuestion.type === 'textarea' && (
+              <div>
+                <textarea
+                  value={customerData[currentQuestion.field] as string || ''}
+                  onChange={(e) => handleInputChange(currentQuestion.field, e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && validateCurrentQuestion()) {
+                      e.preventDefault();
+                      handleNext();
+                    }
+                  }}
+                  placeholder={currentQuestion.placeholder}
+                  rows={5}
+                  className="w-full bg-gray-700 border-2 border-gray-600 rounded-xl px-8 py-5 text-white text-lg focus:border-green-500 focus:outline-none transition-all resize-none shadow-lg"
+                />
+              </div>
             )}
           </div>
-          
-          <div className="md:col-span-2">
-            <label className="block text-gray-300 mb-2 font-medium">הערות נוספות (אופציונלי)</label>
-            <textarea 
-              className="w-full p-3 bg-[#1a1a1a] rounded-lg border border-gray-600 focus:border-green-500 focus:outline-none transition-colors resize-none" 
-              placeholder="הערות נוספות שיכולות לעזור לנו להתאים את השיעור"
-              rows={3}
-              onChange={e=>update('notes', e.target.value)} 
-              disabled={isSubmitting} 
-            />
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-center items-center mt-10 gap-6">
+            <button
+              onClick={handleBack}
+              disabled={currentStep === 0}
+              className={`
+                inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold transition-all transform hover:scale-105 min-w-[120px]
+                ${currentStep === 0
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
+                  : 'bg-gray-700 hover:bg-gray-600 text-white shadow-lg hover:shadow-xl'
+                }
+              `}
+            >
+              <ChevronRight className="w-4 h-4 ml-1" />
+              <span className="mx-1">חזור</span>
+            </button>
+
+            <button
+              onClick={handleNext}
+              disabled={!validateCurrentQuestion()}
+              className={`
+                inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg hover:shadow-xl min-w-[120px]
+                ${validateCurrentQuestion()
+                  ? 'bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white'
+                  : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
+                }
+              `}
+            >
+              <span className="mx-1">{getNextButtonText()}</span>
+              <ChevronLeft className="w-4 h-4 mr-1" />
+            </button>
           </div>
-
-          {/* הסכמות */}
-          <div className="md:col-span-2 space-y-4">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input 
-                type="checkbox" 
-                onChange={e=>update('agreeContact', e.target.checked)} 
-                disabled={isSubmitting}
-                className="w-4 h-4 text-green-500"
-              />
-              <span className="text-gray-300">מסכים/מה ליצירת קשר ושמירת פרטים</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input 
-                type="checkbox" 
-                onChange={e=>update('agreeTerms', e.target.checked)} 
-                disabled={isSubmitting}
-                className="w-4 h-4 text-green-500"
-              />
-              <span className="text-gray-300">מסכים/מה לתנאי שימוש/פרטיות</span>
-            </label>
-          </div>
-        </div>
-        
-        <div className="mt-8 flex justify-center">
-          <button 
-            className="minecraft-button text-lg px-8 py-4 disabled:opacity-50 disabled:cursor-not-allowed" 
-            disabled={!canSubmit || isSubmitting} 
-            onClick={handleSubmit}
-          >
-            {isSubmitting ? 'שומר...' : 'המשך לבחירת מסלול'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PlanStep({ customer }: { customer: any }) {
-  const plans = useMemo(() => ([
-    { key: 'single' as PlanKey, ...PLANS.single },
-    { key: 'three' as PlanKey, ...PLANS.three },
-    { key: 'five' as PlanKey, ...PLANS.five },
-  ]), []);
-
-  const start = async (p: { key: PlanKey; name: string; amount: number; paymentUrl: string }) => {
-    try {
-      // שמירת פרטי התשלום ב-Firebase
-      const paymentData: Payment = {
-        customer_id: customer.id || customer.customerId,
-        customer_name: customer.parentName,
-        customer_email: customer.parentEmail,
-        customer_phone: customer.parentPhone,
-        plan_key: p.key,
-        plan_amount: p.amount,
-        plan_name: p.name,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      const result = await savePayment(paymentData);
-      
-      if (result.success) {
-        // שמירת פרטי הלקוח ב-localStorage לפני ההפניה לתשלום
-        localStorage.setItem('customerData', JSON.stringify({
-          ...customer,
-          planKey: p.key,
-          planAmount: p.amount,
-          planName: p.name,
-          paymentId: result.paymentId,
-          timestamp: new Date().toISOString()
-        }));
-
-        // הפניה ישירה לקישור התשלום של UPAY
-        window.location.href = p.paymentUrl;
-      } else {
-        alert('שגיאה בשמירת פרטי התשלום. אנא נסו שוב.');
-      }
-    } catch (error) {
-      console.error('שגיאה בהתחלת תשלום:', error);
-      alert('שגיאה בהתחלת תשלום. אנא נסו שוב.');
-    }
-  };
-
-  return (
-    <div dir="rtl" className="max-w-4xl mx-auto p-6">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-handjet text-green-500 mb-4">בחירת מסלול ותשלום 💰</h1>
-        <p className="text-xl text-gray-300">בחרו את המסלול המתאים לכם</p>
-      </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        {plans.map(p => (
-          <div key={p.key} className="bg-[#2a2a2a] rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:border-green-500 border border-transparent">
-            <div className="text-center">
-              <div className="text-3xl text-gray-100 mb-4 font-bold">{p.name}</div>
-              <div className="text-green-500 text-2xl font-bold mb-6">{p.amount} ₪</div>
-              <button 
-                className="w-full minecraft-button text-lg py-3" 
-                onClick={()=>start(p)}
-              >
-                בחר מסלול זה
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      <div className="mt-8 text-center">
-        <p className="text-sm text-gray-400">המחירים כוללים מע"מ. החיוב מתבצע אצל חברת הסליקה UPAY.</p>
-        <p className="text-xs text-gray-500 mt-2">לאחר התשלום תועברו אוטומטית לדף התודה</p>
-      </div>
-    </div>
-  );
-}
-
-export const Checkout: React.FC = () => {
-  useSearchParams();
-  const [step, setStep] = useState<Step>('existing');
-  const [customer, setCustomer] = useState<any>({});
-
-  // פונקציה לבדיקת הנתונים
-  const checkStoredData = async () => {
-    try {
-      const { getAllCustomers, getAllPayments } = await import('../data/database');
-      const customers = await getAllCustomers();
-      const payments = await getAllPayments();
-      
-      console.log('=== נתונים שנשמרו ===');
-      console.log('לקוחות:', customers);
-      console.log('תשלומים:', payments);
-      
-      alert(`נשמרו ${customers.length} לקוחות ו-${payments.length} תשלומים. ראה בקונסול לפרטים מלאים.`);
-    } catch (error) {
-      console.error('שגיאה בבדיקת נתונים:', error);
-      alert('שגיאה בבדיקת הנתונים');
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-[#1a1a1a] pt-20">
-      {/* באנר אזהרה קבוע */}
-      <div className="bg-yellow-500/90 backdrop-blur-md border border-yellow-400 rounded-lg p-4 shadow-lg mx-4 mb-6">
-        <div className="flex items-center gap-3 text-yellow-900">
-          <AlertTriangle size={20} className="flex-shrink-0" />
-          <div>
-            <p className="font-bold">מערכת ניסיונית</p>
-            <p className="text-sm">במידה ותקלה, אנא צרו קשר בוואטסאפ: 054-234-7000</p>
-          </div>
-        </div>
-      </div>
-
-      <ProgressSteps currentStep={step} />
-      
-      {step === 'existing' && (
-        <ExistingCustomerStep
-          onFound={(c)=>{ setCustomer((s:any)=>({ ...s, ...c })); setStep('plan'); }}
-          onNotFound={(email, phone)=>{ setCustomer((s:any)=>({ ...s, parentEmail: email, parentPhone: phone })); setStep('register'); }}
-        />
-      )}
-      {step === 'register' && (
-        <RegistrationForm
-          defaults={customer}
-          onSubmit={(data)=>{ setCustomer(data); setStep('plan'); }}
-        />
-      )}
-      {step === 'plan' && (
-        <PlanStep customer={customer} />
-      )}
-      
-      {/* כפתור בדיקה בסוף הדף */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-gray-800 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-green-500 mb-4">🔍 בדיקת נתונים</h3>
-          <p className="text-gray-300 mb-4">לחץ כאן כדי לראות את כל הנתונים שנשמרו במערכת:</p>
-          <button
-            onClick={checkStoredData}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-          >
-            בדוק נתונים שנשמרו
-          </button>
         </div>
       </div>
     </div>

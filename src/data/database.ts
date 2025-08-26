@@ -1,49 +1,31 @@
-// מערכת API לחיבור ל-MySQL
-// זה יעבוד עם השרת Node.js שיצרנו
-
-export interface Customer {
-  id?: number;
-  parent_name: string;
-  parent_email: string;
-  parent_phone: string;
-  child_name: string;
-  child_age: string;
-  child_gender: string;
-  level: string;
-  knows_now?: string;
-  goals?: string[];
-  other_goal?: string;
-  notes?: string;
-  agree_contact: boolean;
-  agree_terms: boolean;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Payment {
-  id?: number;
-  customer_id: number;
-  customer_name: string;
-  customer_email: string;
-  customer_phone: string;
-  plan_key: string;
-  plan_amount: number;
-  plan_name: string;
-  status: string;
-  transaction_id?: string;
-  payment_data?: any;
-  created_at: string;
-  updated_at: string;
-}
-
 // הגדרות API
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://stingerisrael.co.il/class/api' 
+const API_BASE_URL = process.env.NODE_ENV === 'production'
+  ? 'https://stingerisrael.co.il/class/api'
   : 'http://localhost:3001/api';
+
+// Mock API לפיתוח
+const USE_MOCK_API = process.env.NODE_ENV !== 'production';
 
 // פונקציה לשליחת בקשות API
 async function apiRequest(endpoint: string, options: RequestInit = {}) {
+  // Mock API לפיתוח
+  if (USE_MOCK_API) {
+    console.log('🔧 משתמש ב-Mock API לפיתוח');
+    
+    // סימולציה של עיכוב
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Mock responses
+    switch (endpoint) {
+      case '/webhook':
+        return { success: true, message: 'הנתונים נשלחו לוובהוק בהצלחה (Mock)' };
+      
+      default:
+        return { error: 'Mock endpoint לא נמצא' };
+    }
+  }
+  
+  // API אמיתי
   try {
     const url = `${API_BASE_URL}${endpoint}`;
     const response = await fetch(url, {
@@ -62,142 +44,92 @@ async function apiRequest(endpoint: string, options: RequestInit = {}) {
     return await response.json();
   } catch (error: any) {
     console.error(`API Error (${endpoint}):`, error);
-    alert(`שגיאה: ${error.message}`);
     throw error;
   }
 }
 
-// פונקציות לקוחות
-export const saveNewCustomer = async (customerData: Customer) => {
-  try {
-    const result = await apiRequest('/customers', {
-      method: 'POST',
-      body: JSON.stringify(customerData),
-    });
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
+        // פונקציה לשליחת נתונים לוובהוק
+        export const sendToWebhook = async (customerData: any, paymentData: any) => {
+          try {
+            // שליחה לדיסקורד
+            const discordWebhookUrl = 'https://discord.com/api/webhooks/1404519345853431962/Z-Q7si_GHrkz5B70UD_0mZ6HfuydH3XHFUB0UyYh0xoxv2Vv5vNq7lQ2VEEAgcGiC6Ke';
+            
+            const discordMessage = {
+              content: '<@145679462585991169>',
+              embeds: [{
+                title: '🎮 הרשמה חדשה לשיעור פרטי!',
+                color: 0x00ff00,
+                fields: [
+                  {
+                    name: '👨‍👩‍👧‍👦 פרטי ההורה',
+                    value: `**שם:** ${customerData.parent_name}\n**אימייל:** ${customerData.parent_email}\n**טלפון:** ${customerData.parent_phone}`,
+                    inline: true
+                  },
+                  {
+                    name: '👶 פרטי הילד/ה',
+                    value: `**שם:** ${customerData.child_name}\n**גיל:** ${customerData.child_age}\n**מגדר:** ${customerData.child_gender}`,
+                    inline: true
+                  },
+                  {
+                    name: '🎯 רמה ומטרות',
+                    value: `**רמה:** ${customerData.level}\n**מטרות:** ${customerData.goals?.join(', ') || 'לא צוין'}`,
+                    inline: false
+                  },
+                  {
+                    name: '💎 חבילה נבחרת',
+                    value: `**${paymentData.plan_name}** - ₪${paymentData.amount}`,
+                    inline: true
+                  },
+                  {
+                    name: '📝 הערות נוספות',
+                    value: customerData.notes || 'אין הערות נוספות',
+                    inline: false
+                  }
+                ],
+                footer: {
+                  text: `הרשמה מ-${new Date().toLocaleString('he-IL')}`
+                }
+              }]
+            };
 
-export const checkExistingCustomer = async (email: string, phone: string) => {
-  try {
-    const result = await apiRequest('/customers/check', {
-      method: 'POST',
-      body: JSON.stringify({ email, phone }),
-    });
-    return result;
-  } catch (error: any) {
-    return { exists: false, error: error.message };
-  }
-};
+            // שליחה לדיסקורד
+            await fetch(discordWebhookUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(discordMessage),
+            });
 
-export const getAllCustomers = async () => {
-  try {
-    return await apiRequest('/customers');
-  } catch (error: any) {
-    console.error('שגיאה בקבלת לקוחות:', error);
-    return [];
-  }
-};
+            // שליחה לוובהוק המקומי (אם יש)
+            const webhookData = {
+              customer: customerData,
+              payment: paymentData,
+              timestamp: new Date().toISOString(),
+              source: 'private-class-website'
+            };
 
-export const getCustomerById = async (customerId: number) => {
-  try {
-    return await apiRequest(`/customers/${customerId}`);
-  } catch (error: any) {
-    console.error('שגיאה בקבלת לקוח:', error);
-    return null;
-  }
-};
+            const result = await apiRequest('/webhook', {
+              method: 'POST',
+              body: JSON.stringify(webhookData),
+            });
+            
+            return result;
+          } catch (error: any) {
+            return { success: false, error: error.message };
+          }
+        };
 
-// פונקציות תשלומים
-export const savePayment = async (paymentData: Payment) => {
-  try {
-    const result = await apiRequest('/payments', {
-      method: 'POST',
-      body: JSON.stringify(paymentData),
-    });
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
-export const updatePaymentStatus = async (paymentId: number, status: string, transactionId?: string) => {
-  try {
-    const result = await apiRequest(`/payments/${paymentId}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ status, transactionId }),
-    });
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
-export const getAllPayments = async () => {
-  try {
-    return await apiRequest('/payments');
-  } catch (error: any) {
-    console.error('שגיאה בקבלת תשלומים:', error);
-    return [];
-  }
-};
-
-export const getPaymentById = async (paymentId: number) => {
-  try {
-    return await apiRequest(`/payments/${paymentId}`);
-  } catch (error: any) {
-    console.error('שגיאה בקבלת תשלום:', error);
-    return null;
-  }
-};
-
-// ייצוא נתונים
-export const exportData = async () => {
-  try {
-    return await apiRequest('/export');
-  } catch (error: any) {
-    console.error('שגיאה בייצוא נתונים:', error);
-    return { customers: [], payments: [] };
-  }
-};
-
-// מחיקת כל הנתונים (רק לפיתוח!)
-export const clearAllData = async () => {
-  try {
-    const result = await apiRequest('/clear-all', {
-      method: 'DELETE',
-    });
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
-// בדיקת חיבור לשרת
-export const checkServerHealth = async () => {
-  try {
-    const result = await apiRequest('/health');
-    return result;
-  } catch (error: any) {
-    return { status: 'ERROR', message: error.message };
-  }
-};
+// הודעה למפתחים
+if (USE_MOCK_API) {
+  console.log('🔧 הערה: האתר משתמש ב-Mock API לפיתוח.');
+} else {
+  console.log('🔧 הערה: האתר שולח נתונים לוובהוק בשרת.');
+}
 
 // יצוא ברירת מחדל
 const database = {
-  saveNewCustomer,
-  checkExistingCustomer,
-  savePayment,
-  updatePaymentStatus,
-  getAllCustomers,
-  getAllPayments,
-  getCustomerById,
-  getPaymentById,
-  exportData,
-  clearAllData,
-  checkServerHealth,
+  sendToWebhook,
 };
 
 export default database;

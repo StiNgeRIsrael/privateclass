@@ -1,73 +1,115 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-
-const WHATSAPP_BASE = 'https://wa.me/972542347000?text=';
+import { CheckCircle, Heart, Star, Trophy } from 'lucide-react';
+import { sendToWebhook } from '../data/database';
 
 const CheckoutResult: React.FC = () => {
-  const [search] = useSearchParams();
-  const status = search.get('status');
-  const [customerData, setCustomerData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [webhookSent, setWebhookSent] = useState(false);
 
   useEffect(() => {
-    // קריאת פרטי הלקוח מה-localStorage
-    const storedData = localStorage.getItem('customerData');
-    if (storedData) {
+    // שליחת וובהוק אוטומטית
+    const sendWebhook = async () => {
       try {
-        const parsedData = JSON.parse(storedData);
-        setCustomerData(parsedData);
+        // קבלת הנתונים מ-localStorage
+        const customerData = JSON.parse(localStorage.getItem('customerData') || '{}');
+        const paymentData = JSON.parse(localStorage.getItem('paymentData') || '{}');
+        
+        if (customerData.parent_name && paymentData.plan_name) {
+          await sendToWebhook(customerData, paymentData);
+          setWebhookSent(true);
+          
+          // ניקוי localStorage
+          localStorage.removeItem('customerData');
+          localStorage.removeItem('paymentData');
+        }
       } catch (error) {
-        console.error('שגיאה בקריאת פרטי הלקוח:', error);
+        console.error('שגיאה בשליחת וובהוק:', error);
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+
+    sendWebhook();
   }, []);
 
-  if (status === 'cancel') {
+  if (isLoading) {
     return (
-      <div dir="rtl" className="min-h-screen bg-[#1a1a1a] pt-28">
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-3xl font-handjet text-red-500 mb-4">התשלום בוטל</h1>
-          <p className="text-gray-300 mb-6">אפשר לחזור למסלולים ולנסות שוב, או ליצור קשר בוואטסאפ.</p>
-          <div className="flex gap-3 justify-center">
-            <a href="/class/checkout" className="minecraft-button">חזרה למסלולים</a>
-            <a href="https://wa.me/972542347000" className="minecraft-button bg-transparent text-green-500">וואטסאפ</a>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-green-900 via-gray-900 to-blue-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-white text-xl">מעבד את התשלום שלך...</p>
         </div>
       </div>
     );
   }
 
-  // דף התודה הסופי אחרי אישור התשלום
   return (
-    <div dir="rtl" className="min-h-screen bg-[#1a1a1a] pt-28">
-      <div className="container mx-auto px-4 py-16 text-center">
-        <div className="minecraft-card max-w-2xl mx-auto text-center">
-          <div className="inline-flex items-center justify-center w-8 h-8 bg-green-500 text-black rounded-full font-bold text-lg mb-4">3</div>
-          <h1 className="text-4xl font-handjet text-green-500 mb-6">תודה שרכשתם! 🎉</h1>
-          <p className="text-xl text-gray-200 mb-8 leading-relaxed">
-            אנא צרו איתנו קשר בוואטסאפ בצירוף שמכם כדי לתאם את השיעור הבא שלכם
+    <div className="min-h-screen bg-gradient-to-br from-green-900 via-gray-900 to-blue-900 py-20">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* כרטיס תודה ראשי */}
+        <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl p-12 border border-gray-600/50 shadow-2xl text-center mb-8">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mb-8 shadow-lg">
+            <CheckCircle className="w-12 h-12 text-white" />
+          </div>
+          
+          <h1 className="text-5xl font-bold text-white mb-4">תודה לך! 🎉</h1>
+          <p className="text-2xl text-gray-300 mb-8">
+            התשלום שלך התקבל בהצלחה
           </p>
-          {customerData && (
-            <div className="bg-[#2a2a2a] p-4 rounded mb-6 text-right">
-              <p className="text-gray-300 mb-2">פרטי הרכישה:</p>
-              <p className="text-green-400 font-semibold">{customerData.planName} - {customerData.planAmount} ₪</p>
-              {customerData.parentName && (
-                <p className="text-gray-300 text-sm">שם: {customerData.parentName}</p>
-              )}
+          
+          {webhookSent && (
+            <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-6 mb-8">
+              <div className="flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-400 mr-3" />
+                <span className="text-green-300 text-lg">
+                  הפרטים שלך נשלחו בהצלחה! נציג יצור איתך קשר בקרוב
+                </span>
+              </div>
             </div>
           )}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a 
-              href={`${WHATSAPP_BASE}${encodeURIComponent('שלום! רכשתי שיעור/ים ואשמח לתאם את השיעור הבא. שמי: ')}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="minecraft-button text-lg px-8 py-4 bg-green-600 hover:bg-green-700"
-            >
-              📱 פתח וואטסאפ לתיאום שיעור
-            </a>
+        </div>
+
+        {/* כרטיסי מידע */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-gray-600/30 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500/20 rounded-full mb-4">
+              <Heart className="w-8 h-8 text-blue-400" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">השיעור הראשון</h3>
+            <p className="text-gray-300">
+              נציג יצור איתך קשר תוך 24 שעות לתאם את השיעור הראשון
+            </p>
           </div>
-          <p className="text-sm text-gray-400 mt-6">
-            מספר הטלפון שלנו: 054-234-7000
-          </p>
+
+          <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-gray-600/30 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500/20 rounded-full mb-4">
+              <Star className="w-8 h-8 text-green-400" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">הכנה לשיעור</h3>
+            <p className="text-gray-300">
+              וודא שהילד/ה מוכן/ה לשיעור עם מיינקראפט פתוח
+            </p>
+          </div>
+
+          <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-gray-600/30 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-500/20 rounded-full mb-4">
+              <Trophy className="w-8 h-8 text-yellow-400" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">התקדמות</h3>
+            <p className="text-gray-300">
+              אחרי כל שיעור תקבל דוח התקדמות מפורט
+            </p>
+          </div>
+        </div>
+
+        {/* כפתור חזרה לאתר */}
+        <div className="text-center">
+          <a
+            href="/"
+            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
+          >
+            חזרה לאתר הראשי
+          </a>
         </div>
       </div>
     </div>

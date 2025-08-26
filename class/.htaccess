@@ -1,0 +1,13 @@
+# /httpdocs/class/.htaccess
+Options -MultiViews
+DirectoryIndex index.html
+RewriteEngine On
+RewriteBase /class/
+
+# ניתוב API - קודם לכל החוקים האחרים
+RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+
+# ניתוב רגיל לאפליקציה
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
